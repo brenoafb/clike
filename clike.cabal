@@ -28,6 +28,7 @@ library
       Bytecode
       Compiler
       Parser
+      Syntax
       Typechecker
       VM
   other-modules:

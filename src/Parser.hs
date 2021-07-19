@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Parser where
 
+import Syntax
+
 import Control.Monad
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
@@ -10,57 +12,6 @@ import qualified Data.ByteString as B
 import Data.String (fromString)
 import Data.Int
 
-data Program = Program [Import] [Function]
-  deriving Show
-
-data Import = Import B.ByteString
-  deriving Show
-
-data Function = Function B.ByteString [(Type, B.ByteString)] Type Stmt
-  deriving Show
-
-data Type = IntT
-          | ByteT
-          | PtrT
-          | StrT
-          | VoidT
-          deriving (Eq, Show)
-
-data Expr = Num Int32
-          | Byte Int8
-          | Ptr Int32
-          | Var B.ByteString
-          | Str B.ByteString
-          | FunCall B.ByteString [Expr]
-          | RelOp { relOp :: RelOp, e1 :: Expr, e2 :: Expr}
-          | UnOp  { unOp :: UnOp, e1 :: Expr }
-          | BinOp { binOp :: BinOp, e1 :: Expr, e2 :: Expr}
-          deriving Show
-
-data UnOp = Neg | Not
-  deriving (Eq, Show)
-
-data RelOp = Eq | NEq | Gt | Lt | LtEq | GtEq
-  deriving (Eq, Show)
-
-data BinOp = Add
-           | Sub
-           | Mult
-           | Div
-           | And
-           | Or
-           | Subscript
-  deriving (Eq, Show)
-
-data Stmt = Decl Type B.ByteString
-          | Assn B.ByteString Expr
-          | If Expr Stmt
-          | IfElse Expr Stmt Stmt
-          | Block [Stmt]
-          | While Expr Stmt
-          | Return Expr
-          | ExprS Expr
-          deriving Show
 
 languageDef =
   emptyDef { Token.commentStart    = "/*"
@@ -226,8 +177,7 @@ ops = [ [Prefix (reservedOp "!" >> return (UnOp Not))]
          Infix  (reservedOp "-" >> return (BinOp Sub)) AssocLeft
         ]
       , [Infix  (reservedOp "==" >> return (RelOp Eq)) AssocLeft,
-         Infix  (reservedOp "!=" >> return (RelOp NEq)) AssocLeft,
-         Infix  (reservedOp "!!" >> return (BinOp Subscript)) AssocLeft
+         Infix  (reservedOp "!=" >> return (RelOp NEq)) AssocLeft
         ]
       , [Infix  (reservedOp ">=" >> return (RelOp GtEq)) AssocLeft,
          Infix  (reservedOp "<=" >> return (RelOp LtEq)) AssocLeft
@@ -246,7 +196,7 @@ funCall = do
 term = parens expr
      <|> try funCall
      <|> Var <$> identifier
-     <|> Num <$> int               -- might run into trouble...
+     <|> Num <$> int               -- TODO might run into trouble...
      <|> Byte <$> byte
      <|> Ptr <$> ptr
      <|> Str <$> stringLiteral

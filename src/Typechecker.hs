@@ -4,6 +4,7 @@ module Typechecker
   ( typecheck
   ) where
 
+import Syntax
 import Parser
 import Control.Monad.Reader
 import Control.Monad.State
@@ -22,7 +23,7 @@ data TypeInfo = VarT { varType :: Type }
               deriving (Eq, Show)
 
 typecheck :: Program -> Maybe B.ByteString
-typecheck (Program _ funcs) = go funcs
+typecheck (Program _ funcs) = go funcs -- TODO validate imports?
   where env = M.fromList (map funcTypeInfo funcs)
         go [] = Nothing
         go (func@(Function name args retType body):funcs) =
