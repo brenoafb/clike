@@ -1,7 +1,7 @@
 import io;
 
-func fac(int32 n) : int32 {
-  int32 tmp;
+func fac(int n) : int {
+  int tmp;
   tmp = 1;
 
   while (n > 0) {
@@ -12,7 +12,7 @@ func fac(int32 n) : int32 {
 }
 
 func main() : void {
-  int32 f;
+  int f;
 
   f = fac(10);
 
