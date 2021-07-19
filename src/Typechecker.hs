@@ -100,6 +100,12 @@ typecheckStmt (Return e) = do
         VarT exprType | exprType /= retType -> throwError $ "Return type error for " <> funcName
     _ -> throwError $ "Invalid return: " <> funcName
 
+typecheckStmt (ExprS e) = do
+  exprType <- getType e
+  case exprType of
+    VarT VoidT -> pure ()
+    _ -> throwError "Invalid expression statement: need to be void"
+
 getType :: Expr -> TypeC TypeInfo
 getType (Num _) = return $ VarT IntT
 getType (Byte _) = return $ VarT ByteT
