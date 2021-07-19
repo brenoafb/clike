@@ -11,7 +11,7 @@ type Address = Int32
 data Constant = IntC Int32
               | ByteC Int8
               | StringC B.ByteString
-              deriving (Eq, Show)
+              deriving (Eq, Ord, Show)
 
 data Bytecode = Bytecode
   { bcConstants :: [(Constant, Address)]
@@ -23,16 +23,18 @@ data BCFunction = BCFunction
   , fCode :: [OP]
   } deriving Show
 
-data OP = PUSH Int32        -- push integer onto stack
-        | LOAD Index        -- load register value to stack
-        | STORE Index       -- store top of stack in register at index
-        | GOTO Index        -- goto pc + index unconditionally
-        | CALL B.ByteString -- call function
-        | RET               -- return from function
-        | BZ Index          -- branch to pc + index if top of stack is zero
-        | LOADPC            -- load PC + 2 onto the stack
-        | STOREPC           -- store top of stack onto PC
-        | SVC               -- call service routine
+data OP = PUSHI Int32        -- push integer onto stack
+        | PUSHR Index        -- load register value to stack
+        | POPR  Index        -- store top of stack in register at index
+        | GOTO  Index        -- goto pc + index unconditionally
+        | CALL  B.ByteString -- call function
+        | RET                -- return from function
+        | BZ Index           -- branch to pc + index if top of stack is zero
+        | SVC                -- call service routine
+        | LW Index           -- addr <- pop; R[index] <- mem[addr] (word)
+        | LB Index           -- addr <- pop; R[index] <- mem[addr] (byte)
+        | SW Index           -- addr <- pop; mem[addr] <- R[index] (word)
+        | SB Index           -- addr <- pop; mem[addr] <- R[index] (byte)
         | HALT
         | ADD
         | SUB
@@ -42,4 +44,10 @@ data OP = PUSH Int32        -- push integer onto stack
         | AND
         | OR
         | NOT
+        | EQ
+        | NEQ
+        | GT
+        | LT
+        | LTEQ
+        | GTEQ
         deriving (Eq, Show)
