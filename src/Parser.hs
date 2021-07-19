@@ -10,7 +10,11 @@ import qualified Data.ByteString as B
 import Data.String (fromString)
 import Data.Int
 
-type Program = [Function]
+data Program = Program [Import] [Function]
+  deriving Show
+
+data Import = Import B.ByteString
+  deriving Show
 
 data Function = Function B.ByteString [(Type, B.ByteString)] Type Stmt
   deriving Show
@@ -55,6 +59,7 @@ data Stmt = Decl Type B.ByteString
           | Block [Stmt]
           | While Expr Stmt
           | Return Expr
+          | ExprS Expr
           deriving Show
 
 languageDef =
@@ -74,6 +79,7 @@ languageDef =
                                      , "str"
                                      , "bool"
                                      , "void"
+                                     , "import"
                                      ]
            , Token.reservedOpNames = [ "+", "-", "*", "/"
                                      , "=", "++", "&&", "||"
@@ -103,7 +109,19 @@ parseStr str = case parse program "" str of
                  Right r -> r
 
 program :: Parser Program
-program = whiteSpace >> many function
+program = do
+  whiteSpace
+  imports <- many importP
+  whiteSpace
+  functions <- many function
+  return $ Program imports functions
+
+importP :: Parser Import
+importP = do
+  reserved "import"
+  name <- identifier
+  semi
+  return $ Import name
 
 function :: Parser Function
 function = do
@@ -121,6 +139,7 @@ function = do
 
 statement :: Parser Stmt
 statement = block
+         <|> try exprStmt
          <|> returnStmt
          <|> declaration
          <|> assignment
@@ -186,6 +205,12 @@ returnStmt = do
   e <- expr
   semi
   return $ Return e
+
+exprStmt :: Parser Stmt
+exprStmt = do
+  e <- expr
+  semi
+  return $ ExprS e
 
 expr :: Parser Expr
 expr = buildExpressionParser ops term

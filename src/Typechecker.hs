@@ -22,7 +22,7 @@ data TypeInfo = VarT { varType :: Type }
               deriving (Eq, Show)
 
 typecheck :: Program -> Maybe B.ByteString
-typecheck funcs = go funcs
+typecheck (Program _ funcs) = go funcs
   where env = M.fromList (map funcTypeInfo funcs)
         go [] = Nothing
         go (func@(Function name args retType body):funcs) =
