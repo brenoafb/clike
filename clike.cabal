@@ -41,6 +41,7 @@ library
       base >=4.7 && <5
     , bytestring
     , containers
+    , monad-loops
     , mtl
     , parsec
     , uniplate
@@ -59,6 +60,7 @@ executable clike-exe
     , bytestring
     , clike
     , containers
+    , monad-loops
     , mtl
     , parsec
     , uniplate
@@ -78,6 +80,7 @@ test-suite clike-test
     , bytestring
     , clike
     , containers
+    , monad-loops
     , mtl
     , parsec
     , uniplate

@@ -61,7 +61,7 @@ genFunctionCode ctx@(Ctx ct st rs) (Function _ vars retType body) = do
       <> pops
       <> [PUSHR 0] -- push return address
       <> bodyCode
-      <> [RET | retType == VoidT]
+      <> if retType == VoidT then [PUSHI 0, RET] else [] -- push dummy value if returns void
 
 compileStmt :: Ctx
             -> Stmt
