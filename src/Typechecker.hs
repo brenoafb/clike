@@ -41,6 +41,12 @@ funcTypeInfo (Function name args retType body) = (name, FuncT argTypes retType)
   where argTypes = map fst args
 
 typecheckFunc :: Function -> TypeC ()
+typecheckFunc (Function "main" [] VoidT body) =
+  typecheckStmt body
+typecheckFunc (Function "main" _ VoidT body) =
+  throwError "main must have no arguments"
+typecheckFunc (Function "main" _ _ body) =
+  throwError "main must return void"
 typecheckFunc (Function name args retType body) =
   typecheckStmt body
 
