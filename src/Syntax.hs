@@ -1,7 +1,10 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Syntax where
 
 import qualified Data.ByteString as B
 import Data.Int
+import Data.Data
 
 data Program = Program [Import] [Function]
   deriving Show
@@ -19,7 +22,7 @@ data Type = IntT
           | PtrT
           | StrT
           | VoidT
-          deriving (Eq, Show)
+          deriving (Eq, Show, Data, Typeable)
 
 data Expr = Num Int32
           | Byte Int8
@@ -30,13 +33,13 @@ data Expr = Num Int32
           | RelOp { relOp :: RelOp, e1 :: Expr, e2 :: Expr}
           | UnOp  { unOp :: UnOp, e1 :: Expr }
           | BinOp { binOp :: BinOp, e1 :: Expr, e2 :: Expr}
-          deriving Show
+          deriving (Show, Data, Typeable)
 
 data UnOp = Neg | Not
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data, Typeable)
 
 data RelOp = Eq | NEq | Gt | Lt | LtEq | GtEq
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data, Typeable)
 
 data BinOp = Add
            | Sub
@@ -44,7 +47,7 @@ data BinOp = Add
            | Div
            | And
            | Or
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data, Typeable)
 
 data Stmt = Decl Type B.ByteString
           | Assn Ident Expr
@@ -54,4 +57,4 @@ data Stmt = Decl Type B.ByteString
           | While Expr Stmt
           | Return Expr
           | ExprS Expr
-          deriving Show
+          deriving (Show, Data, Typeable)

@@ -11,6 +11,7 @@ import Control.Monad.State
 import Control.Monad.Except
 import qualified Data.Map as M
 import qualified Data.ByteString as B
+import Data.String (fromString)
 
 type Error = B.ByteString
 
@@ -21,6 +22,8 @@ type TypeEnv = M.Map B.ByteString TypeInfo
 data TypeInfo = VarT { varType :: Type }
               | FuncT { argTypes :: [Type], retType :: Type }
               deriving (Eq, Show)
+
+primitiveFunctions = ["service"]
 
 typecheck :: Program -> Maybe B.ByteString
 typecheck (Program _ funcs) = go funcs -- TODO validate imports?
@@ -131,6 +134,10 @@ getType (FunCall s args) = do
       if map VarT argTypes == types
          then return $ VarT retType
          else throwError $ "Error in function call for " <> s
+    Just x -> throwError $ "Not a function: " <> s
+    Nothing -> if s `elem` primitiveFunctions
+                  then undefined -- TODO handle this case (add wildcard type?)
+                  else throwError $ "Undefined function " <> s
 getType (RelOp _ e1 e2) = do
   typ1 <- getType e1
   typ2 <- getType e2

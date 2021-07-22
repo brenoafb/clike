@@ -112,7 +112,7 @@ executeOp (PUSHR index) = do
     Nothing -> throwError "Invalid register index"
     Just v -> modify (push v) >> incPC
 
-executeOp (POPR  index) = pop (pure index) >> pure ()
+executeOp (POPR  index) = pop (pure index) >> incPC
 
 executeOp (GOTO  index) = modify (goto index) >> incPC
 
@@ -136,7 +136,7 @@ executeOp HALT = pure ()
 executeOp ADD  = stackBinOp (+) >> incPC
 executeOp SUB  = stackBinOp (-) >> incPC
 executeOp MUL  = stackBinOp (*) >> incPC
-executeOp DIV  = undefined
+executeOp DIV  = stackBinOp div >> incPC
 executeOp NEG  = undefined
 executeOp AND  = undefined
 executeOp OR   = undefined

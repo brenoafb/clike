@@ -14,7 +14,7 @@ data Constant = IntC Int32
 
 data Bytecode = Bytecode
   { bcConstants :: [(Constant, Address)]
-  , bcFunctions :: [BCFunction]
+  , bcFunctions :: [(B.ByteString, [OP])]
   } deriving Show
 
 data BCFunction = BCFunction

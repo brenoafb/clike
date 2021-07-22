@@ -4,28 +4,34 @@ module Compiler where
 
 import Prelude hiding (GT, EQ, LT)
 
+
 import Syntax
 import Bytecode
+import ConstantTable
+import SymbolTable
 
 import Control.Monad.State
 import Control.Monad.Except
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B
-
-type ConstantTable = M.Map Constant Address -- maps constant to address in memory
-type SymbolTable = M.Map Ident Index        -- maps symbol to register index
-type RegSet = [Index] -- indicates registers used by the function
+import Data.List (sortOn)
 
 data Ctx = Ctx ConstantTable SymbolTable RegSet
 
 type Error = B.ByteString
 
 loadDependencies :: [B.ByteString] -> IO Program
-loadDependencies = undefined
+loadDependencies deps = undefined -- TODO
 
-compile :: [Program] -> Bytecode
-compile = undefined
+compile :: Program -> Either Error Bytecode
+compile prog@(Program _ funcs) = do
+  let funcNames = map (\(Function fn _ _ _) -> fn) funcs
+      ct = mkConstantTable prog
+  funcsCode <- mapM (compileFunction ct) funcs
+  let bcFunctions = zip funcNames funcsCode
+      bcConstants = sortOn snd $ M.toList ct
+  pure $ Bytecode bcConstants bcFunctions
 
 getVarIndex :: SymbolTable -> Ident -> Either Error Index
 getVarIndex st v =
@@ -33,10 +39,20 @@ getVarIndex st v =
     Nothing -> throwError $ "Unknown variable " <> v
     Just i  -> pure i
 
-compileFunction :: Ctx
+compileFunction :: ConstantTable -> Function -> Either Error [OP]
+compileFunction ct f = do
+  let (st, rs) = allocateRegisters f
+      ctx = Ctx ct st rs
+  genFunctionCode ctx f
+
+genFunctionCode :: Ctx
                 -> Function
                 -> Either Error [OP]
-compileFunction ctx@(Ctx ct st rs) (Function _ vars _ body) = do
+genFunctionCode ctx@(Ctx ct st rs) (Function "main" vars _ body) = do
+  bodyCode <- compileStmt ctx body
+  pure $ bodyCode
+      <> [HALT]
+genFunctionCode ctx@(Ctx ct st rs) (Function _ vars retType body) = do
   let varNames = map snd vars
   indices <- mapM (getVarIndex st) varNames
   let pops = map POPR indices
@@ -45,6 +61,7 @@ compileFunction ctx@(Ctx ct st rs) (Function _ vars _ body) = do
       <> pops
       <> [PUSHR 0] -- push return address
       <> bodyCode
+      <> [RET | retType == VoidT]
 
 compileStmt :: Ctx
             -> Stmt
@@ -117,7 +134,7 @@ compileExpr ctx@(Ctx ct st rs) expr =
           popRegs  = map POPR (reverse rs)
       pure $ pushRegs
           <> argsCode
-          <> [CALL name]
+          <> [if name == "service" then SVC else CALL name]
           <> [POPR 0]  -- save return value
           <> popRegs
           <> [PUSHR 0] -- push return value

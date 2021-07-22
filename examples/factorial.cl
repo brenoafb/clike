@@ -13,10 +13,15 @@ func fac(int n) : int {
 
 func main() : void {
   int f;
+  str message;
+  str empty;
+
+  message = "The factorial of 10 is ";
+  empty = "";
 
   f = fac(10);
 
-  print("The factorial of 10 is ");
+  print(message);
   printint(f);
-  println("");
+  println(empty);
 }
