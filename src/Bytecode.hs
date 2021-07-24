@@ -3,6 +3,7 @@ module Bytecode where
 
 import qualified Data.ByteString as B
 import Data.Int
+import Data.String (fromString)
 
 type Index = Int32
 type Address = Int32
@@ -15,12 +16,20 @@ data Constant = IntC Int32
 data Bytecode = Bytecode
   { bcConstants :: [(Constant, Address)]
   , bcFunctions :: [(B.ByteString, [OP])]
-  } deriving Show
+  }
+
+instance Show Bytecode where
+  show bc = concatMap (\f -> show f) (bcFunctions bc)
 
 data BCFunction = BCFunction
   { fName :: B.ByteString
   , fCode :: [OP]
-  } deriving Show
+  }
+
+instance Show BCFunction where
+  show f =
+    show (fName f) <> "\n"
+    <> concatMap (\op -> "\t" <> show op <> "\n") (fCode f)
 
 data OP = PUSHI Int32        -- push integer onto stack
         | PUSHR Index        -- load register value to stack

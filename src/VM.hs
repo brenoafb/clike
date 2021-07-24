@@ -18,6 +18,8 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Loops (untilM_)
 
+import Debug.Trace (trace)
+
 type Error = B.ByteString
 type Memory = V.Vector Int8
 type Code = V.Vector OP
@@ -32,6 +34,12 @@ data VM =
      , memSize :: Int32
      , memory :: Memory
      }
+
+instance Show VM where
+  show vm =  "CS\t\t" <> show (callStack vm) <> "\n"
+          <> "PC\t\t" <> show (pc vm) <> "\n"
+          <> "Stack\t\t" <> show (stack vm) <> "\n"
+          <> "registers\t" <> show  (registers vm) <> "\n"
 
 initVM :: Int8 -> Int32 -> [(Constant, Address)] -> VM
 initVM nRegs memSize caddrs =
@@ -144,6 +152,11 @@ incPC = do
   vm <- get
   put vm { pc = pc vm + 1 }
 
+setPC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
+setPC pc = do
+  vm <- get
+  put vm { pc = pc }
+
 
 executeOp :: ( MonadState VM m
              , MonadIO m
@@ -161,19 +174,25 @@ executeOp (PUSHR index) = do
 
 executeOp (POPR  index) = pop (pure index) >> incPC
 
-executeOp (GOTO  index) = modify (goto index) >> incPC
+executeOp (GOTO  index) = modify (goto index)
 
 executeOp (CALL  f) = do
   pc <- gets pc
+  vm <- get
   modify (push $ pc + 1)
   modify (pushCallStack f)
+  setPC 0
+  vm <- get
+  trace ("CALL " <> "\n" <> show vm) (pure ())
 
 executeOp RET = do
-  _ <- popCallStack
+  f <- popCallStack
+  vm <- get
+  trace ("RET from  " <> show f <> "\n" <> show vm) (pure ())
   retVal <- pop Nothing
   retAddr <- pop Nothing
   vm <- get
-  put vm { pc = retAddr }
+  setPC retAddr
   modify ( push retVal )
 
 executeOp (BZ index   ) = do

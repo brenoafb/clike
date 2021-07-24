@@ -101,10 +101,11 @@ compileStmt ctx@(Ctx ct st rs) stmt =
     While cond body -> do
       condCode <- compileExpr ctx cond
       bodyCode <- compileStmt ctx body
-      let offset = fromIntegral $ length bodyCode
+      let offset = fromIntegral $ length bodyCode + 1
       pure $  condCode
            <> [BZ offset]
            <> bodyCode
+           <> [GOTO (-offset)]
 
     Return expr -> do
       exprCode <- compileExpr ctx expr

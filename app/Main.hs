@@ -36,7 +36,7 @@ compileProgram file = do
     Left err -> B.putStrLn $ "Compiler error: " <> err
     Right bc -> print bc
 
-nRegsCONST = 32
+nRegsCONST = 8
 memSizeCONST = 1024
 
 executeProgram :: FilePath -> IO ()
@@ -49,10 +49,10 @@ executeProgram file = do
       let vm = initVM nRegsCONST memSizeCONST constants
           ft = mkFunctionTable functions
        in do
-         result <- evalStateT (runReaderT (runExceptT executeVM) ft) vm
+         result <- runExceptT (execStateT (runReaderT executeVM ft) vm)
          case result of
            Left err -> print err
-           Right () -> print "Done!"
+           Right vm -> print vm
 
 typecheckProgram :: FilePath -> IO ()
 typecheckProgram file = do
