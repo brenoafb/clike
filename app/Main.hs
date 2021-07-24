@@ -51,8 +51,8 @@ executeProgram file = do
        in do
          result <- runExceptT (execStateT (runReaderT executeVM ft) vm)
          case result of
-           Left err -> print err
-           Right vm -> print vm
+           Left err -> B.putStrLn err
+           Right vm -> print "done!" -- print vm
 
 typecheckProgram :: FilePath -> IO ()
 typecheckProgram file = do

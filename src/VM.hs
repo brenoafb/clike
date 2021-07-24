@@ -41,6 +41,8 @@ instance Show VM where
           <> "Stack\t\t" <> show (stack vm) <> "\n"
           <> "registers\t" <> show  (registers vm) <> "\n"
 
+vmError = undefined
+
 initVM :: Int8 -> Int32 -> [(Constant, Address)] -> VM
 initVM nRegs memSize caddrs =
   let registers = V.replicate (fromIntegral nRegs) 0
@@ -142,7 +144,7 @@ pop mi = do
        in put vm { stack = xs
                  , registers = newRegisters
                  } >> pure x
-    [] -> throwError "VM error: empty stack (POP)"
+    [] -> throwError $ "VM error: empty stack (POP)\n" <> fromString (show vm)
 
 goto :: Index -> VM -> VM
 goto i vm = vm { pc = pc vm + i }
@@ -182,13 +184,13 @@ executeOp (CALL  f) = do
   modify (push $ pc + 1)
   modify (pushCallStack f)
   setPC 0
-  vm <- get
-  trace ("CALL " <> "\n" <> show vm) (pure ())
+  -- vm <- get
+  --trace ("CALL " <> "\n" <> show vm) (pure ())
 
 executeOp RET = do
   f <- popCallStack
-  vm <- get
-  trace ("RET from  " <> show f <> "\n" <> show vm) (pure ())
+  -- vm <- get
+  -- trace ("RET from  " <> show f <> "\n" <> show vm) (pure ())
   retVal <- pop Nothing
   retAddr <- pop Nothing
   vm <- get
@@ -200,7 +202,7 @@ executeOp (BZ index   ) = do
   let inc = if p == 0
               then index
               else 0
-   in modify (\vm -> vm { pc = pc vm + inc }) >> incPC
+   in modify (\vm -> vm { pc = pc vm + inc + 1 })
 
 executeOp SVC = pop Nothing >>= handleSVC >> incPC
 executeOp (LW index   ) = undefined
@@ -216,8 +218,20 @@ executeOp NEG  = undefined
 executeOp AND  = undefined
 executeOp OR   = undefined
 executeOp NOT  = undefined
-executeOp EQ   = undefined
-executeOp NEQ  = undefined
+executeOp EQ   = do
+  vm <- get
+  case stack vm of
+    (x:y:xs) ->
+      let result = if x == y then 1 else 0
+          in put vm { stack = result : xs } >> incPC
+    _ -> throwError "Unsufficient operands in stack"
+executeOp NEQ  = do
+  vm <- get
+  case stack vm of
+    (x:y:xs) ->
+      let result = if x == y then 0 else 1
+          in put vm { stack = result : xs } >> incPC
+    _ -> throwError "Unsufficient operands in stack"
 executeOp GT   = undefined
 executeOp LT   = undefined
 executeOp LTEQ = undefined
@@ -225,6 +239,7 @@ executeOp GTEQ = undefined
 
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
 handleSVC 1 = do
+  -- trace "PRINTINT SVC CALL" (pure ())
   int <- pop Nothing
   liftIO $ print int
 

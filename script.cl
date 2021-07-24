@@ -1,15 +1,22 @@
 import io;
 
-func sumOfSquares(int x, int y) : int {
-  return x*x + y*y;
+func printInt(int x) : void {
+  service(1, x);
 }
 
 func main() : void {
-  int x;
-  int y;
-  int z;
+  int c;
+  int s;
 
-  x = 3;
-  y = 4;
-  z = sumOfSquares(x, y);
+  c = 10;
+  s = 0;
+
+  while (c != 0) {
+    printInt(c);
+    s = s + c;
+    c = c - 1;
+  }
+
+  printInt(c);
+  printInt(s);
 }

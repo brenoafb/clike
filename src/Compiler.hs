@@ -101,11 +101,12 @@ compileStmt ctx@(Ctx ct st rs) stmt =
     While cond body -> do
       condCode <- compileExpr ctx cond
       bodyCode <- compileStmt ctx body
-      let offset = fromIntegral $ length bodyCode + 1
+      let bzOffset = fromIntegral $ length bodyCode + 1
+          gotoOffset = negate . fromIntegral $ length bodyCode + length condCode + 1
       pure $  condCode
-           <> [BZ offset]
+           <> [BZ bzOffset]
            <> bodyCode
-           <> [GOTO (-offset)]
+           <> [GOTO gotoOffset]
 
     Return expr -> do
       exprCode <- compileExpr ctx expr
@@ -129,13 +130,17 @@ compileExpr ctx@(Ctx ct st rs) expr =
       case M.lookup (StringC s) ct of
         Nothing -> throwError $ "Unknown string \"" <> s <> "\""
         Just addr -> pure [PUSHI addr]
+    FunCall "service" args -> do
+      argsCode <- concat <$> mapM (compileExpr ctx) (reverse args)
+      pure $ argsCode
+          <> [SVC]
     FunCall name args -> do
       argsCode <- concat <$> mapM (compileExpr ctx) (reverse args)
       let pushRegs = map PUSHR rs
           popRegs  = map POPR (reverse rs)
       pure $ pushRegs
           <> argsCode
-          <> [if name == "service" then SVC else CALL name]
+          <> [CALL name]
           <> [POPR 0]  -- save return value
           <> popRegs
           <> [PUSHR 0] -- push return value
@@ -149,7 +154,7 @@ compileExpr ctx@(Ctx ct st rs) expr =
     BinOp op e1 e2 -> do
       c1 <- compileExpr ctx e1
       c2 <- compileExpr ctx e2
-      pure $ c1 <> c2 <> [binOpBC op]
+      pure $ c2 <> c1 <> [binOpBC op]
 
 unOpBC :: UnOp -> OP
 unOpBC Neg = NEG
