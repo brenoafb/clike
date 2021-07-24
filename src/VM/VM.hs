@@ -111,7 +111,7 @@ const2mem (ByteC b)   = byte2mem b
 const2mem (StringC s) = str2mem  s
 
 str2mem :: B.ByteString -> [Int8]
-str2mem = map fromIntegral . B.unpack
+str2mem s = map fromIntegral (B.unpack s) <> [0]
 
 word2mem :: Int32 -> [Int8]
 word2mem w = [b1, b2, b3, b4]
@@ -318,22 +318,19 @@ writeAddressWord addr word = do
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
 handleSVC 1 = do           -- print int
   int <- pop Nothing
-  liftIO $ print int
+  liftIO . putStr $ show int
 
 handleSVC 2 = do           -- print byte
   word <- pop Nothing
   let byte = fromIntegral word :: Int8
-  liftIO $ print byte
+  liftIO . putStr $ show byte
 
 handleSVC 3 = do           -- print char
   word <- pop Nothing
   let char = toEnum (fromIntegral word) :: Char
   liftIO $ putStr [char]
 
-handleSVC 4 = do           -- print string TODO is it needed?
-  word <- pop Nothing
-  let byte = toEnum (fromIntegral word) :: Char
-  liftIO $ print byte
+handleSVC 4 = undefined           -- print string TODO is it needed?
 
 handleSVC 11 = do           -- read int from memory
   addr <- pop Nothing

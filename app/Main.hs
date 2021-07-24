@@ -17,7 +17,7 @@ import qualified Data.ByteString as B
 import qualified Data.Binary as Bin
 
 nRegsCONST = 16
-memSizeCONST = 16
+memSizeCONST = 1024
 
 main :: IO ()
 main = do
@@ -38,7 +38,6 @@ compileProgram file = do
   case compile program of
     Left err -> B.putStrLn $ "Compiler error: " <> err
     Right bc -> do
-      print bc
       Bin.encodeFile "bc" bc
       putStrLn "Bytecode written do 'bc'"
 
