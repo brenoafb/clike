@@ -210,32 +210,20 @@ executeOp (LB index   ) = undefined
 executeOp (SW index   ) = undefined
 executeOp (SB index   ) = undefined
 executeOp HALT = pure ()
-executeOp ADD  = stackBinOp (+) >> incPC
-executeOp SUB  = stackBinOp (-) >> incPC
-executeOp MUL  = stackBinOp (*) >> incPC
-executeOp DIV  = stackBinOp div >> incPC
-executeOp NEG  = undefined
-executeOp AND  = undefined
-executeOp OR   = undefined
-executeOp NOT  = undefined
-executeOp EQ   = do
-  vm <- get
-  case stack vm of
-    (x:y:xs) ->
-      let result = if x == y then 1 else 0
-          in put vm { stack = result : xs } >> incPC
-    _ -> throwError "Unsufficient operands in stack"
-executeOp NEQ  = do
-  vm <- get
-  case stack vm of
-    (x:y:xs) ->
-      let result = if x == y then 0 else 1
-          in put vm { stack = result : xs } >> incPC
-    _ -> throwError "Unsufficient operands in stack"
-executeOp GT   = undefined
-executeOp LT   = undefined
-executeOp LTEQ = undefined
-executeOp GTEQ = undefined
+executeOp ADD  = stackBinOp (+)   >> incPC
+executeOp SUB  = stackBinOp (-)   >> incPC
+executeOp MUL  = stackBinOp (*)   >> incPC
+executeOp DIV  = stackBinOp div   >> incPC
+executeOp NEG  = stackUnOp negate >> incPC
+executeOp AND  = stackBinOp (\x y -> if x == 1 && y == 1 then 1 else 0) >> incPC
+executeOp OR   = stackBinOp (\x y -> if x == 1 || y == 1 then 1 else 0) >> incPC
+executeOp NOT  = stackUnOp (\x -> if x == 0 then 1 else 0) >> incPC
+executeOp EQ   = stackBinOp (\x y -> if x == y then 1 else 0) >> incPC
+executeOp NEQ  = stackBinOp (\x y -> if x == y then 0 else 1) >> incPC
+executeOp GT   = stackBinOp (\x y -> if x >  y then 1 else 0) >> incPC
+executeOp LT   = stackBinOp (\x y -> if x <  y then 1 else 0) >> incPC
+executeOp GTEQ = stackBinOp (\x y -> if x >= y then 1 else 0) >> incPC
+executeOp LTEQ = stackBinOp (\x y -> if x <= y then 1 else 0) >> incPC
 
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
 handleSVC 1 = do
@@ -259,5 +247,15 @@ stackBinOp binop = do
   case stack vm of
     (x:y:xs) ->
       let result = x `binop` y
+          in put vm { stack = result : xs } >> pure result
+    _ -> throwError "Unsufficient operands in stack"
+
+stackUnOp :: (MonadState VM m, MonadIO m, MonadError Error m)
+           => (Int32 -> Int32) -> m Int32
+stackUnOp unop = do
+  vm <- get
+  case stack vm of
+    (x:xs) ->
+      let result = unop x
           in put vm { stack = result : xs } >> pure result
     _ -> throwError "Unsufficient operands in stack"
