@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Compiler where
+module Compiler.Compiler where
 
 import Prelude hiding (GT, EQ, LT)
 
 
-import Syntax
-import Bytecode
-import ConstantTable
-import SymbolTable
+import Data.Syntax
+import Data.Bytecode
+import Compiler.ConstantTable
+import Compiler.RegAlloc
 
 import Control.Monad.State
 import Control.Monad.Except

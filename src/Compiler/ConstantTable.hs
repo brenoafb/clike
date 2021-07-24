@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ConstantTable where
+module Compiler.ConstantTable where
 
-import Syntax
-import Bytecode
+import Data.Syntax
+import Data.Bytecode
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B

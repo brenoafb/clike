@@ -1,5 +1,4 @@
-
-module Bytecode where
+module Data.Bytecode where
 
 import qualified Data.ByteString as B
 import Data.Int

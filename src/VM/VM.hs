@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module VM where
+module VM.VM where
 
 import Prelude hiding (EQ, GT, LT)
-import Bytecode
 
+import Data.Bytecode
 import Data.Int
 import Data.Bits
 import Data.String (fromString)
@@ -205,25 +205,27 @@ executeOp (BZ index   ) = do
    in modify (\vm -> vm { pc = pc vm + inc + 1 })
 
 executeOp SVC = pop Nothing >>= handleSVC >> incPC
-executeOp (LW index   ) = undefined
-executeOp (LB index   ) = undefined
-executeOp (SW index   ) = undefined
-executeOp (SB index   ) = undefined
+
+executeOp (LW index) = undefined
+executeOp (LB index) = undefined
+executeOp (SW index) = undefined
+executeOp (SB index) = undefined
+
 executeOp HALT = pure ()
 executeOp ADD  = stackBinOp (+)   >> incPC
 executeOp SUB  = stackBinOp (-)   >> incPC
 executeOp MUL  = stackBinOp (*)   >> incPC
 executeOp DIV  = stackBinOp div   >> incPC
-executeOp NEG  = stackUnOp negate >> incPC
 executeOp AND  = stackBinOp (\x y -> if x == 1 && y == 1 then 1 else 0) >> incPC
 executeOp OR   = stackBinOp (\x y -> if x == 1 || y == 1 then 1 else 0) >> incPC
-executeOp NOT  = stackUnOp (\x -> if x == 0 then 1 else 0) >> incPC
 executeOp EQ   = stackBinOp (\x y -> if x == y then 1 else 0) >> incPC
 executeOp NEQ  = stackBinOp (\x y -> if x == y then 0 else 1) >> incPC
 executeOp GT   = stackBinOp (\x y -> if x >  y then 1 else 0) >> incPC
 executeOp LT   = stackBinOp (\x y -> if x <  y then 1 else 0) >> incPC
 executeOp GTEQ = stackBinOp (\x y -> if x >= y then 1 else 0) >> incPC
 executeOp LTEQ = stackBinOp (\x y -> if x <= y then 1 else 0) >> incPC
+executeOp NEG  = stackUnOp negate >> incPC
+executeOp NOT  = stackUnOp  (\x -> if x == 0 then 1 else 0) >> incPC
 
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
 handleSVC 1 = do

@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Typechecker
+module Compiler.Typechecker
   ( typecheck
   ) where
 
-import Syntax
-import Parser
+import Data.Syntax
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except

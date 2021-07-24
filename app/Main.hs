@@ -2,11 +2,11 @@
 
 module Main where
 
-import Bytecode
-import Parser
-import Typechecker
-import Compiler
-import VM
+import Data.Bytecode
+import Parser.Parser
+import Compiler.Typechecker
+import Compiler.Compiler
+import VM.VM
 
 import Control.Monad.Except
 import Control.Monad.State

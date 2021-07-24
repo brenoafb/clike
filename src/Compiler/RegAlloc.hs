@@ -1,10 +1,10 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module SymbolTable where
+module Compiler.RegAlloc where
 
-import Syntax
-import Bytecode
+import Data.Syntax
+import Data.Bytecode
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B

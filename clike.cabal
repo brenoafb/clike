@@ -25,14 +25,14 @@ source-repository head
 
 library
   exposed-modules:
-      Bytecode
-      Compiler
-      ConstantTable
-      Parser
-      SymbolTable
-      Syntax
-      Typechecker
-      VM
+      Compiler.Compiler
+      Compiler.ConstantTable
+      Compiler.RegAlloc
+      Compiler.Typechecker
+      Data.Bytecode
+      Data.Syntax
+      Parser.Parser
+      VM.VM
   other-modules:
       Paths_clike
   hs-source-dirs:

@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Parser where
+module Parser.Parser where
 
-import Syntax
 
 import Control.Monad
 import Text.ParserCombinators.Parsec
@@ -11,6 +10,7 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 import qualified Data.ByteString as B
 import Data.String (fromString)
 import Data.Int
+import Data.Syntax
 
 
 languageDef =

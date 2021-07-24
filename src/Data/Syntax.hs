@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module Syntax where
+module Data.Syntax where
 
 import qualified Data.ByteString as B
 import Data.Int
