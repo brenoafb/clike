@@ -37,8 +37,9 @@ data OP = PUSHI Int32        -- push integer onto stack
         | PUSHR Index        -- load register value to stack
         | POPR  Index        -- store top of stack in register at index
         | GOTO  Index        -- goto pc + index unconditionally
-        | CALL  B.ByteString -- call function
+        | CALL  B.ByteString -- call function (push retval to stack, push call stack, pc = 0)
         | RET                -- return from function
+        | RETV               -- return from void function
         | BZ Index           -- branch to pc + index if top of stack is zero
         | SVC                -- call service routine
         | RW                 -- addr <- pop; push mem[addr] (word)

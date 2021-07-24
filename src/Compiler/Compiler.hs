@@ -17,7 +17,10 @@ import qualified Data.Map as M
 import qualified Data.ByteString as B
 import Data.List (sortOn)
 
-data Ctx = Ctx ConstantTable SymbolTable RegSet
+data LCtx = LCtx SymbolTable RegSet               -- local context
+data GCtx = GCtx FunctionTable ConstantTable      -- global context
+
+type FunctionTable = M.Map Ident Type
 
 type Error = B.ByteString
 
@@ -26,9 +29,11 @@ loadDependencies deps = undefined -- TODO
 
 compile :: Program -> Either Error Bytecode
 compile prog@(Program _ funcs) = do
-  let funcNames = map (\(Function fn _ _ _) -> fn) funcs
+  let funcNames = map (\(Function fn fargs ftype fbody) -> fn) funcs
+      ft = M.fromList $ map (\(Function fn fargs ftype fbody) -> (fn, ftype)) funcs
       ct = mkConstantTable prog
-  funcsCode <- mapM (compileFunction ct) funcs
+      gctx = GCtx ft ct
+  funcsCode <- mapM (compileFunction gctx) funcs
   let bcFunctions = zip funcNames funcsCode
       bcConstants = sortOn snd $ M.toList ct
   pure $ Bytecode bcConstants bcFunctions
@@ -39,34 +44,36 @@ getVarIndex st v =
     Nothing -> throwError $ "Unknown variable " <> v
     Just i  -> pure i
 
-compileFunction :: ConstantTable -> Function -> Either Error [OP]
-compileFunction ct f = do
+compileFunction :: GCtx -> Function -> Either Error [OP]
+compileFunction gctx f = do
   let (st, rs) = allocateRegisters f
-      ctx = Ctx ct st rs
-  genFunctionCode ctx f
+      lctx = LCtx st rs
+  genFunctionCode gctx lctx f
 
-genFunctionCode :: Ctx
+genFunctionCode :: GCtx
+                -> LCtx
                 -> Function
                 -> Either Error [OP]
-genFunctionCode ctx@(Ctx ct st rs) (Function "main" vars _ body) = do
-  bodyCode <- compileStmt ctx body
+genFunctionCode gctx lctx (Function "main" vars _ body) = do
+  bodyCode <- compileStmt gctx lctx body
   pure $ bodyCode
       <> [HALT]
-genFunctionCode ctx@(Ctx ct st rs) (Function _ vars retType body) = do
+genFunctionCode gctx lctx@(LCtx st rs) (Function _ vars retType body) = do
   let varNames = map snd vars
   indices <- mapM (getVarIndex st) varNames
   let pops = map POPR indices
-  bodyCode <- compileStmt ctx body
+  bodyCode <- compileStmt gctx lctx body
   pure $ [POPR 0]  -- save retaddr
       <> pops
       <> [PUSHR 0] -- push return address
       <> bodyCode
-      <> if retType == VoidT then [PUSHI 0, RET] else [] -- push dummy value if returns void
+      <> [RETV | retType == VoidT]
 
-compileStmt :: Ctx
+compileStmt :: GCtx
+            -> LCtx
             -> Stmt
             -> Either Error [OP]
-compileStmt ctx@(Ctx ct st rs) stmt =
+compileStmt gctx@(GCtx ft ct) lctx@(LCtx st rs) stmt =
   case stmt of
 
     Decl _ _ -> pure []
@@ -75,19 +82,19 @@ compileStmt ctx@(Ctx ct st rs) stmt =
       case M.lookup ident st of
         Nothing -> throwError $ "Error: unknown variable " <> ident
         Just index -> do
-          exprCode <- compileExpr ctx expr
+          exprCode <- compileExpr gctx lctx expr
           pure $ exprCode <> [POPR index]
 
     If cond body -> do
-      condCode <- compileExpr ctx cond
-      bodyCode <- compileStmt ctx body
+      condCode <- compileExpr gctx lctx cond
+      bodyCode <- compileStmt gctx lctx body
       let offset = fromIntegral $ length bodyCode
       pure $ condCode <> [BZ offset] <> bodyCode
 
     IfElse cond conseq alt -> do
-      condCode <- compileExpr ctx cond
-      conseqCode <- compileStmt ctx conseq
-      altCode <- compileStmt ctx alt
+      condCode <- compileExpr gctx lctx cond
+      conseqCode <- compileStmt gctx lctx conseq
+      altCode <- compileStmt gctx lctx alt
       let offset1 = fromIntegral $ length conseqCode + 1
           offset2 = fromIntegral $ length altCode
       pure $  condCode
@@ -96,11 +103,11 @@ compileStmt ctx@(Ctx ct st rs) stmt =
            <> [GOTO offset2]
            <> altCode
 
-    Block stmts -> concat <$> mapM (compileStmt ctx) stmts
+    Block stmts -> concat <$> mapM (compileStmt gctx lctx) stmts
 
     While cond body -> do
-      condCode <- compileExpr ctx cond
-      bodyCode <- compileStmt ctx body
+      condCode <- compileExpr gctx lctx cond
+      bodyCode <- compileStmt gctx lctx body
       let bzOffset = fromIntegral $ length bodyCode + 1
           gotoOffset = negate . fromIntegral $ length bodyCode + length condCode + 1
       pure $  condCode
@@ -109,15 +116,16 @@ compileStmt ctx@(Ctx ct st rs) stmt =
            <> [GOTO gotoOffset]
 
     Return expr -> do
-      exprCode <- compileExpr ctx expr
+      exprCode <- compileExpr gctx lctx expr
       pure $ exprCode <> [RET]
 
-    ExprS expr -> compileExpr ctx expr
+    ExprS expr -> compileExpr gctx lctx expr
 
-compileExpr :: Ctx
+compileExpr :: GCtx
+            -> LCtx
             -> Expr
             -> Either Error [OP]
-compileExpr ctx@(Ctx ct st rs) expr =
+compileExpr gctx@(GCtx ft ct) lctx@(LCtx st rs) expr =
   case expr of
     Num n -> pure [PUSHI n]
     Byte b -> pure [PUSHI $ fromIntegral b]
@@ -131,29 +139,32 @@ compileExpr ctx@(Ctx ct st rs) expr =
         Nothing -> throwError $ "Unknown string \"" <> s <> "\""
         Just addr -> pure [PUSHI addr]
     FunCall "service" args -> do
-      argsCode <- concat <$> mapM (compileExpr ctx) (reverse args)
+      argsCode <- concat <$> mapM (compileExpr gctx lctx) (reverse args)
       pure $ argsCode
           <> [SVC]
     FunCall name args -> do
-      argsCode <- concat <$> mapM (compileExpr ctx) (reverse args)
-      let pushRegs = map PUSHR rs
-          popRegs  = map POPR (reverse rs)
-      pure $ pushRegs
-          <> argsCode
-          <> [CALL name]
-          <> [POPR 0]  -- save return value
-          <> popRegs
-          <> [PUSHR 0] -- push return value
+      case M.lookup name ft of
+        Nothing -> throwError $ "Unknown function: " <> name
+        Just retType -> do
+          argsCode <- concat <$> mapM (compileExpr gctx lctx) (reverse args)
+          let pushRegs = map PUSHR rs
+              popRegs  = map POPR (reverse rs)
+          pure $ pushRegs
+              <> argsCode
+              <> [CALL name]
+              <> [POPR 0 | retType /= VoidT]  -- save return value
+              <> popRegs
+              <> [PUSHR 0 | retType /= VoidT] -- restore retval
     UnOp op e1 -> do
-      c1 <- compileExpr ctx e1
+      c1 <- compileExpr gctx lctx e1
       pure $ c1 <> [unOpBC op]
     RelOp op e1 e2    -> do
-      c1 <- compileExpr ctx e1
-      c2 <- compileExpr ctx e2
+      c1 <- compileExpr gctx lctx e1
+      c2 <- compileExpr gctx lctx e2
       pure $ c2 <> c1 <> [relOpBC op]
     BinOp op e1 e2 -> do
-      c1 <- compileExpr ctx e1
-      c2 <- compileExpr ctx e2
+      c1 <- compileExpr gctx lctx e1
+      c2 <- compileExpr gctx lctx e2
       pure $ c2 <> c1 <> [binOpBC op]
 
 unOpBC :: UnOp -> OP

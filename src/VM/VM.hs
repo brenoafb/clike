@@ -66,7 +66,14 @@ executeVM :: ( MonadState VM m
              , MonadError Error m
              , MonadReader FunctionTable m
              ) => m ()
-executeVM = untilM_ (pure ()) cycleVM
+executeVM = untilM_ (pure ()) body
+  where
+    -- body = do
+    --   vm <- get
+    --   liftIO $ print vm
+    --   -- _ <- liftIO getChar
+    --   cycleVM
+    body = cycleVM
 
 cycleVM :: ( MonadState VM m
            , MonadIO m
@@ -192,18 +199,20 @@ executeOp (CALL  f) = do
   modify (push $ pc + 1)
   modify (pushCallStack f)
   setPC 0
-  -- vm <- get
-  -- trace ("CALL " <> "\n" <> show vm) (pure ())
 
 executeOp RET = do
   f <- popCallStack
-  -- vm <- get
-  -- trace ("RET from  " <> show f <> "\n" <> show vm) (pure ())
   retVal <- pop Nothing
   retAddr <- pop Nothing
   vm <- get
   setPC retAddr
   modify ( push retVal )
+
+executeOp RETV = do
+  f <- popCallStack
+  retAddr <- pop Nothing
+  vm <- get
+  setPC retAddr
 
 executeOp (BZ index   ) = do
   p <- pop Nothing -- + 1
@@ -276,6 +285,10 @@ readAddressWord addr = do
            b4 = mem V.! addr' + 3
         in pure $ mem2word [b1,b2,b3,b4]
 
+readAddressBytes :: (MonadState VM m, MonadError Error m)
+                 => Int32 -> Int -> m (V.Vector Int8)
+readAddressBytes addr size = V.mapM readAddressByte $ V.enumFromN addr size
+
 writeAddressByte :: (MonadState VM m, MonadError Error m) => Int32 -> Int8 -> m ()
 writeAddressByte addr byte = do
   vm <- get
@@ -301,6 +314,7 @@ writeAddressWord addr word = do
            vm'  = vm { memory = mem' }
        put vm'
 
+
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
 handleSVC 1 = do           -- print int
   int <- pop Nothing
@@ -312,6 +326,11 @@ handleSVC 2 = do           -- print byte
   liftIO $ print byte
 
 handleSVC 3 = do           -- print char
+  word <- pop Nothing
+  let char = toEnum (fromIntegral word) :: Char
+  liftIO $ putStr [char]
+
+handleSVC 4 = do           -- print string TODO is it needed?
   word <- pop Nothing
   let byte = toEnum (fromIntegral word) :: Char
   liftIO $ print byte

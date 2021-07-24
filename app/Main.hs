@@ -17,7 +17,7 @@ import qualified Data.ByteString as B
 import qualified Data.Binary as Bin
 
 nRegsCONST = 16
-memSizeCONST = 1024
+memSizeCONST = 16
 
 main :: IO ()
 main = do
