@@ -6,17 +6,14 @@ func printInt(int x) : void {
 
 func main() : void {
   int c;
-  int s;
 
-  c = 10;
-  s = 0;
+  c = 100;
 
-  while (c != 0) {
-    printInt(c);
-    s = s + c;
-    c = c - 1;
+  if (c == 0) {
+    printInt(1);
+  } else {
+    printInt(2);
   }
 
   printInt(c);
-  printInt(s);
 }

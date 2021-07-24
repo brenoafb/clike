@@ -88,12 +88,12 @@ compileStmt ctx@(Ctx ct st rs) stmt =
       condCode <- compileExpr ctx cond
       conseqCode <- compileStmt ctx conseq
       altCode <- compileStmt ctx alt
-      let offset1 = fromIntegral $ length conseqCode
+      let offset1 = fromIntegral $ length conseqCode + 1
           offset2 = fromIntegral $ length altCode
       pure $  condCode
            <> [BZ offset1]
            <> conseqCode
-           <> [BZ offset2]
+           <> [GOTO offset2]
            <> altCode
 
     Block stmts -> concat <$> mapM (compileStmt ctx) stmts
@@ -150,7 +150,7 @@ compileExpr ctx@(Ctx ct st rs) expr =
     RelOp op e1 e2    -> do
       c1 <- compileExpr ctx e1
       c2 <- compileExpr ctx e2
-      pure $ c1 <> c2 <> [relOpBC op]
+      pure $ c2 <> c1 <> [relOpBC op]
     BinOp op e1 e2 -> do
       c1 <- compileExpr ctx e1
       c2 <- compileExpr ctx e2
