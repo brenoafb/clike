@@ -14,7 +14,10 @@ import Control.Monad.Reader
 
 import System.Environment
 import qualified Data.ByteString as B
+import qualified Data.Binary as Bin
 
+nRegsCONST = 16
+memSizeCONST = 1024
 
 main :: IO ()
 main = do
@@ -34,25 +37,21 @@ compileProgram file = do
   let program = parseStr code
   case compile program of
     Left err -> B.putStrLn $ "Compiler error: " <> err
-    Right bc -> print bc
-
-nRegsCONST = 8
-memSizeCONST = 8
+    Right bc -> do
+      print bc
+      Bin.encodeFile "bc" bc
+      putStrLn "Bytecode written do 'bc'"
 
 executeProgram :: FilePath -> IO ()
 executeProgram file = do
-  code <- readFile file
-  let program = parseStr code
-  case compile program of
-    Left err -> B.putStrLn $ "Compiler error: " <> err
-    Right bc@(Bytecode constants functions) -> do
-      let vm = initVM nRegsCONST memSizeCONST constants
-          ft = mkFunctionTable functions
-       in do
-         result <- runExceptT (execStateT (runReaderT executeVM ft) vm)
-         case result of
-           Left err -> B.putStrLn err
-           Right vm -> print "done!" -- print vm
+  bc <- Bin.decodeFile file
+  let (Bytecode constants functions) = bc
+      vm = initVM nRegsCONST memSizeCONST constants
+      ft = mkFunctionTable functions
+  result <- runExceptT (execStateT (runReaderT executeVM ft) vm)
+  case result of
+    Left err -> B.putStrLn err
+    Right vm -> pure ()
 
 typecheckProgram :: FilePath -> IO ()
 typecheckProgram file = do

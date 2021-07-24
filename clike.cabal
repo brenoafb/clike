@@ -39,6 +39,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , binary
     , bytestring
     , containers
     , monad-loops
@@ -57,6 +58,7 @@ executable clike-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , binary
     , bytestring
     , clike
     , containers
@@ -77,6 +79,7 @@ test-suite clike-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , binary
     , bytestring
     , clike
     , containers

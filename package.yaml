@@ -28,6 +28,7 @@ dependencies:
 - vector
 - uniplate
 - monad-loops
+- binary
 
 library:
   source-dirs: src

@@ -1,34 +1,37 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Data.Bytecode where
 
 import qualified Data.ByteString as B
 import Data.Int
 import Data.String (fromString)
+import Data.Binary
+import GHC.Generics (Generic)
 
 type Index = Int32
 type Address = Int32
 
-data Constant = IntC Int32
-              | ByteC Int8
-              | StringC B.ByteString
-              deriving (Eq, Ord, Show)
-
 data Bytecode = Bytecode
   { bcConstants :: [(Constant, Address)]
   , bcFunctions :: [(B.ByteString, [OP])]
-  }
+  } deriving Generic
+
+instance Binary Bytecode
+
+data Constant = IntC Int32
+              | ByteC Int8
+              | StringC B.ByteString
+              deriving (Eq, Ord, Show, Generic)
+
+instance Binary Constant
+
 
 instance Show Bytecode where
-  show bc = concatMap (\f -> show f) (bcFunctions bc)
+  show bc = concatMap (\f -> showFunction f) (bcFunctions bc)
 
-data BCFunction = BCFunction
-  { fName :: B.ByteString
-  , fCode :: [OP]
-  }
-
-instance Show BCFunction where
-  show f =
-    show (fName f) <> "\n"
-    <> concatMap (\op -> "\t" <> show op <> "\n") (fCode f)
+showFunction (name, code) =
+  show name <> "\n"
+  <> concatMap (\op -> "\t" <> show op <> "\n") code
 
 data OP = PUSHI Int32        -- push integer onto stack
         | PUSHR Index        -- load register value to stack
@@ -57,4 +60,6 @@ data OP = PUSHI Int32        -- push integer onto stack
         | LT
         | LTEQ
         | GTEQ
-        deriving (Eq, Show)
+        deriving (Eq, Show, Generic)
+
+instance Binary OP
