@@ -1,19 +1,22 @@
 import io;
 
-func printInt(int x) : void {
-  service(1, x);
+func printByte(byte x) : void {
+  service(2, x);
+}
+
+func readByte(ptr addr) : byte {
+  return service(12, addr);
+}
+
+func writeByte(ptr addr, byte b) : void  {
+  service(14, addr, b);
 }
 
 func main() : void {
-  int c;
+  byte c;
 
-  c = 100;
+  writeByte(0, 1);
+  c = readByte(0);
 
-  if (c == 0) {
-    printInt(1);
-  } else {
-    printInt(2);
-  }
-
-  printInt(c);
+  printByte(c);
 }

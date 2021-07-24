@@ -37,7 +37,7 @@ compileProgram file = do
     Right bc -> print bc
 
 nRegsCONST = 8
-memSizeCONST = 1024
+memSizeCONST = 8
 
 executeProgram :: FilePath -> IO ()
 executeProgram file = do

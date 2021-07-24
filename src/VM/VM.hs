@@ -36,10 +36,11 @@ data VM =
      }
 
 instance Show VM where
-  show vm =  "CS\t\t" <> show (callStack vm) <> "\n"
-          <> "PC\t\t" <> show (pc vm) <> "\n"
-          <> "Stack\t\t" <> show (stack vm) <> "\n"
+  show vm =  "cs\t\t"      <> show (callStack vm) <> "\n"
+          <> "pc\t\t"      <> show (pc vm) <> "\n"
+          <> "stack\t\t"   <> show (stack vm) <> "\n"
           <> "registers\t" <> show  (registers vm) <> "\n"
+          <> "memory\t"    <> show  (memory vm) <> "\n"
 
 vmError = undefined
 
@@ -107,12 +108,19 @@ str2mem = map fromIntegral . B.unpack
 
 word2mem :: Int32 -> [Int8]
 word2mem w = [b1, b2, b3, b4]
-  where b1 = (fromIntegral (w `shift`  0) .&. mask) :: Int8
-        b2 = (fromIntegral (w `shift`  8) .&. mask) :: Int8
-        b3 = (fromIntegral (w `shift` 16) .&. mask) :: Int8
-        b4 = (fromIntegral (w `shift` 24) .&. mask) :: Int8
-        mask = -128 -- 0xff
+  where b1 = fromIntegral ((w `shiftR`  0) .&. mask)
+        b2 = fromIntegral ((w `shiftR`  8) .&. mask)
+        b3 = fromIntegral ((w `shiftR` 16) .&. mask)
+        b4 = fromIntegral ((w `shiftR` 24) .&. mask)
+        mask = 0xff
 
+mem2word :: [Int8] -> Int32
+mem2word (b1:b2:b3:b4:_) =
+      fromIntegral b1 `shiftL`  0
+  .|. fromIntegral b2 `shiftL`  8
+  .|. fromIntegral b3 `shiftL` 16
+  .|. fromIntegral b4 `shiftL` 24
+mem2word _ = 0 -- TODO
 
 byte2mem :: Int8 -> [Int8]
 byte2mem = pure
@@ -185,7 +193,7 @@ executeOp (CALL  f) = do
   modify (pushCallStack f)
   setPC 0
   -- vm <- get
-  --trace ("CALL " <> "\n" <> show vm) (pure ())
+  -- trace ("CALL " <> "\n" <> show vm) (pure ())
 
 executeOp RET = do
   f <- popCallStack
@@ -206,10 +214,29 @@ executeOp (BZ index   ) = do
 
 executeOp SVC = pop Nothing >>= handleSVC >> incPC
 
-executeOp (LW index) = undefined
-executeOp (LB index) = undefined
-executeOp (SW index) = undefined
-executeOp (SB index) = undefined
+executeOp RW = do
+  addr <- pop Nothing
+  value <- readAddressWord addr
+  modify $ push value
+  incPC
+
+executeOp RB = do
+  addr <- pop Nothing
+  value <- readAddressByte addr
+  modify (push $ fromIntegral value)
+  incPC
+
+executeOp WW = do
+  addr <- pop Nothing
+  word <- pop Nothing
+  writeAddressWord addr word
+  incPC
+
+executeOp WB = do
+  addr <- pop Nothing
+  byte <- pop Nothing
+  writeAddressByte addr (fromIntegral byte)
+  incPC
 
 executeOp HALT = pure ()
 executeOp ADD  = stackBinOp (+)   >> incPC
@@ -227,11 +254,87 @@ executeOp LTEQ = stackBinOp (\x y -> if x <= y then 1 else 0) >> incPC
 executeOp NEG  = stackUnOp negate >> incPC
 executeOp NOT  = stackUnOp  (\x -> if x == 0 then 1 else 0) >> incPC
 
+readAddressByte :: (MonadState VM m, MonadError Error m) => Int32 -> m Int8
+readAddressByte addr = do
+  vm <- get
+  case memory vm V.!? fromIntegral addr of
+    Nothing -> throwError $ "Invalid address: " <> fromString (show addr)
+    Just b  -> pure b
+
+readAddressWord :: (MonadState VM m, MonadError Error m) => Int32 -> m Int32
+readAddressWord addr = do
+  -- TODO addr should be word-aligned (multiple of 4)
+  vm <- get
+  let mem = memory vm
+      addr' = fromIntegral addr
+  if V.length mem <= addr' + 3
+     then throwError $ "Invalid word address " <> fromString (show addr)
+     else
+       let b1 = mem V.! addr'
+           b2 = mem V.! addr' + 1
+           b3 = mem V.! addr' + 2
+           b4 = mem V.! addr' + 3
+        in pure $ mem2word [b1,b2,b3,b4]
+
+writeAddressByte :: (MonadState VM m, MonadError Error m) => Int32 -> Int8 -> m ()
+writeAddressByte addr byte = do
+  vm <- get
+  let addr' = fromIntegral addr
+      mem   = memory vm
+  if V.length mem <= addr'
+     then throwError $ "Invalid address: " <> fromString (show addr)
+     else do
+       let mem' = mem V.// [(addr', byte)]
+           vm'  = vm { memory = mem' }
+       put vm'
+
+writeAddressWord :: (MonadState VM m, MonadError Error m) => Int32 -> Int32 -> m ()
+writeAddressWord addr word = do
+  vm <- get
+  let addr' = fromIntegral addr
+      mem   = memory vm
+  if V.length mem <= addr' + 3
+     then throwError $ "Invalid address: " <> fromString (show addr)
+     else do
+       let bytes = word2mem word
+           mem' = mem V.// zip [addr'..] bytes
+           vm'  = vm { memory = mem' }
+       put vm'
+
 handleSVC :: (MonadState VM m, MonadIO m, MonadError Error m) => Int32 -> m ()
-handleSVC 1 = do
-  -- trace "PRINTINT SVC CALL" (pure ())
+handleSVC 1 = do           -- print int
   int <- pop Nothing
   liftIO $ print int
+
+handleSVC 2 = do           -- print byte
+  word <- pop Nothing
+  let byte = fromIntegral word :: Int8
+  liftIO $ print byte
+
+handleSVC 3 = do           -- print char
+  word <- pop Nothing
+  let byte = toEnum (fromIntegral word) :: Char
+  liftIO $ print byte
+
+handleSVC 11 = do           -- read int from memory
+  addr <- pop Nothing
+  word <- readAddressWord addr
+  modify (push word)
+
+handleSVC 12 = do           -- read byte from memory
+  addr <- pop Nothing
+  byte <- readAddressByte addr
+  modify (push $ fromIntegral byte)
+
+handleSVC 13 = do           -- write word to memory
+  addr <- pop Nothing
+  word <- pop Nothing
+  writeAddressWord addr word
+
+handleSVC 14 = do           -- write byte to memory
+  addr <- pop Nothing
+  byte <- fromIntegral <$> pop Nothing
+  writeAddressByte addr byte
 
 lookupFunction :: ( MonadError Error m
                   , MonadReader FunctionTable m

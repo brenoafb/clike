@@ -38,10 +38,10 @@ data OP = PUSHI Int32        -- push integer onto stack
         | RET                -- return from function
         | BZ Index           -- branch to pc + index if top of stack is zero
         | SVC                -- call service routine
-        | LW Index           -- addr <- pop; R[index] <- mem[addr] (word)
-        | LB Index           -- addr <- pop; R[index] <- mem[addr] (byte)
-        | SW Index           -- addr <- pop; mem[addr] <- R[index] (word)
-        | SB Index           -- addr <- pop; mem[addr] <- R[index] (byte)
+        | RW                 -- addr <- pop; push mem[addr] (word)
+        | RB                 -- addr <- pop; push mem[addr] (byte)
+        | WW                 -- TODO addr <- pop; x <- pop; mem[addr] <- x (word)
+        | WB                 -- TODO addr <- pop; x <- pop; mem[addr] <- x (byte)
         | HALT
         | ADD
         | SUB
