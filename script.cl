@@ -1,21 +1,5 @@
 import stdlib;
 
-func printStr(ptr addr) : void {
-  byte b;
-
-  b = readByte(addr);
-
-  while (b) {
-    printChar(b);
-    addr = addr + 1;
-    b = readByte(addr);
-  }
-}
-
-func println() : void {
-  printChar(10);
-}
-
 func main() : void {
   str message;
   str sep;
@@ -49,5 +33,5 @@ func main() : void {
     n = n + 1;
   }
 
-  println();
+  printNewline();
 }
