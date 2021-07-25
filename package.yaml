@@ -29,6 +29,7 @@ dependencies:
 - uniplate
 - monad-loops
 - binary
+- text
 
 library:
   source-dirs: src

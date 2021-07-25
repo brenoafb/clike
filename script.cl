@@ -1,24 +1,4 @@
-import io;
-
-func printInt(byte x) : void {
-  service(1, x);
-}
-
-func printByte(byte x) : void {
-  service(2, x);
-}
-
-func printChar(byte x) : void {
-  service(3, x);
-}
-
-func readByte(ptr addr) : byte {
-  return service(12, addr);
-}
-
-func writeByte(ptr addr, byte b) : void  {
-  service(14, addr, b);
-}
+import stdlib;
 
 func printStr(ptr addr) : void {
   byte b;

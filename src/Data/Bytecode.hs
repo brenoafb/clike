@@ -3,6 +3,7 @@
 module Data.Bytecode where
 
 import qualified Data.ByteString as B
+import Data.Syntax
 import Data.Int
 import Data.String (fromString)
 import Data.Binary
@@ -13,7 +14,7 @@ type Address = Int32
 
 data Bytecode = Bytecode
   { bcConstants :: [(Constant, Address)]
-  , bcFunctions :: [(B.ByteString, [OP])]
+  , bcFunctions :: [(B.ByteString, Type, [OP])]
   } deriving Generic
 
 instance Binary Bytecode
@@ -29,8 +30,8 @@ instance Binary Constant
 instance Show Bytecode where
   show bc = concatMap (\f -> showFunction f) (bcFunctions bc)
 
-showFunction (name, code) =
-  show name <> "\n"
+showFunction (name, typ, code) =
+  show name <> " " <> show typ <>  "\n"
   <> concatMap (\op -> "\t" <> show op <> "\n") code
 
 data OP = PUSHI Int32        -- push integer onto stack

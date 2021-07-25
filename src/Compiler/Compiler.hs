@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Compiler.Compiler where
@@ -8,6 +9,7 @@ import Prelude hiding (GT, EQ, LT)
 import Data.Syntax
 import Data.Bytecode
 import Compiler.ConstantTable
+import Compiler.FunctionTable
 import Compiler.RegAlloc
 
 import Control.Monad.State
@@ -15,45 +17,58 @@ import Control.Monad.Except
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B
+import qualified Data.Binary as Bin
 import Data.List (sortOn)
+import Data.String (fromString)
+
+import Utils
 
 data LCtx = LCtx SymbolTable RegSet               -- local context
 data GCtx = GCtx FunctionTable ConstantTable      -- global context
 
-type FunctionTable = M.Map Ident Type
-
 type Error = B.ByteString
 
-loadDependencies :: [B.ByteString] -> IO Program
-loadDependencies deps = undefined -- TODO
+linkBytecode :: [Bytecode] -> Bytecode
+linkBytecode bcs = -- TODO merge constant addresses correctly
+  Bytecode (concatMap bcConstants bcs) (concatMap bcFunctions bcs)
 
-compile :: Program -> Either Error Bytecode
-compile prog@(Program _ funcs) = do
+loadBytecode :: (MonadIO m)
+             => B.ByteString -> m Bytecode
+loadBytecode = liftIO . Bin.decodeFile . bs2str
+
+compile :: (MonadError Error m, MonadIO m)
+        => Program -> m Bytecode
+compile prog@(Program imports funcs) = do
+  let importNames = map (\(Import name) -> name) imports
+  libs <- mapM loadBytecode importNames
   let funcNames = map (\(Function fn fargs ftype fbody) -> fn) funcs
-      ft = M.fromList $ map (\(Function fn fargs ftype fbody) -> (fn, ftype)) funcs
-      ct = mkConstantTable prog
+      funcTypes = map (\(Function fn fargs ftype fbody) -> ftype) funcs
+      ft = mkFunctionTable prog libs
+      ct = mkConstantTable prog -- TODO take libs into account
       gctx = GCtx ft ct
-  funcsCode <- mapM (compileFunction gctx) funcs
-  let bcFunctions = zip funcNames funcsCode
+  funcCodes <- mapM (compileFunction gctx) funcs
+  let bcFunctions = zip3 funcNames funcTypes funcCodes
       bcConstants = sortOn snd $ M.toList ct
-  pure $ Bytecode bcConstants bcFunctions
+      bc = Bytecode bcConstants bcFunctions
+  pure $ linkBytecode $ bc : libs
 
-getVarIndex :: SymbolTable -> Ident -> Either Error Index
+getVarIndex :: (MonadError Error m) => SymbolTable -> Ident -> m Index
 getVarIndex st v =
   case M.lookup v st of
     Nothing -> throwError $ "Unknown variable " <> v
     Just i  -> pure i
 
-compileFunction :: GCtx -> Function -> Either Error [OP]
+compileFunction :: (MonadError Error m) => GCtx -> Function -> m [OP]
 compileFunction gctx f = do
   let (st, rs) = allocateRegisters f
       lctx = LCtx st rs
   genFunctionCode gctx lctx f
 
-genFunctionCode :: GCtx
+genFunctionCode :: (MonadError Error m)
+                => GCtx
                 -> LCtx
                 -> Function
-                -> Either Error [OP]
+                -> m [OP]
 genFunctionCode gctx lctx (Function "main" vars _ body) = do
   bodyCode <- compileStmt gctx lctx body
   pure $ bodyCode
@@ -69,10 +84,11 @@ genFunctionCode gctx lctx@(LCtx st rs) (Function _ vars retType body) = do
       <> bodyCode
       <> [RETV | retType == VoidT]
 
-compileStmt :: GCtx
+compileStmt :: (MonadError Error m)
+            => GCtx
             -> LCtx
             -> Stmt
-            -> Either Error [OP]
+            -> m [OP]
 compileStmt gctx@(GCtx ft ct) lctx@(LCtx st rs) stmt =
   case stmt of
 
@@ -121,10 +137,11 @@ compileStmt gctx@(GCtx ft ct) lctx@(LCtx st rs) stmt =
 
     ExprS expr -> compileExpr gctx lctx expr
 
-compileExpr :: GCtx
+compileExpr :: (MonadError Error m)
+            => GCtx
             -> LCtx
             -> Expr
-            -> Either Error [OP]
+            -> m [OP]
 compileExpr gctx@(GCtx ft ct) lctx@(LCtx st rs) expr =
   case expr of
     Num n -> pure [PUSHI n]

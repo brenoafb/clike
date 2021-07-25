@@ -1,10 +1,13 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Data.Syntax where
 
 import qualified Data.ByteString as B
 import Data.Int
 import Data.Data
+import Data.Binary
+import GHC.Generics (Generic)
 
 data Program = Program [Import] [Function]
   deriving Show
@@ -22,7 +25,9 @@ data Type = IntT
           | PtrT
           | StrT
           | VoidT
-          deriving (Eq, Show, Data, Typeable)
+          deriving (Eq, Show, Data, Typeable, Generic)
+
+instance Binary Type
 
 data Expr = Num Int32
           | Byte Int8

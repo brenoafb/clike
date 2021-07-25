@@ -3,6 +3,7 @@
 module Main where
 
 import Data.Bytecode
+import Data.Syntax
 import Parser.Parser
 import Compiler.Typechecker
 import Compiler.Compiler
@@ -21,24 +22,33 @@ memSizeCONST = 1024
 
 main :: IO ()
 main = do
+  -- currentDirectory <- getCurrentDirectory
+  -- contents <- getDirectoryContents currentDirectory
+  -- print currentDirectory
+  -- print contents
   args <- getArgs
   case args of
     [] -> return ()
     [filename] -> executeProgram filename
-    ["-t", filename] -> typecheckProgram filename
-    ["-p", filename] -> printAST filename
-    ["-c", filename] -> compileProgram filename
-    ["-e", filename] -> executeProgram filename
-    ["-s", filename] -> buildSymbolTables filename
+    ["-t", filename]             -> typecheckProgram filename
+    ["-p", filename]             -> printAST filename
+    ["-c", filename]             -> compileProgram filename "bc"
+    ["-c", filename, bcFilename] -> compileProgram filename bcFilename
+    ["-e", filename]             -> executeProgram filename
+    ["-s", filename]             -> buildSymbolTables filename
 
-compileProgram :: FilePath -> IO ()
-compileProgram file = do
+compileProgram :: FilePath -> FilePath -> IO ()
+compileProgram file out = do
   code <- readFile file
-  let program = parseStr code
-  case compile program of
+  let program@(Program imports functions) = parseStr code
+  result <- runExceptT $ compile program
+  case result of
     Left err -> B.putStrLn $ "Compiler error: " <> err
     Right bc -> do
-      Bin.encodeFile "bc" bc
+      let importNames = map (\(Import dep) -> dep) imports
+      libs <- liftIO $ mapM loadBytecode importNames
+      let linkedBC = linkBytecode $ bc : libs
+      Bin.encodeFile out linkedBC
       putStrLn "Bytecode written do 'bc'"
 
 executeProgram :: FilePath -> IO ()
@@ -46,7 +56,7 @@ executeProgram file = do
   bc <- Bin.decodeFile file
   let (Bytecode constants functions) = bc
       vm = initVM nRegsCONST memSizeCONST constants
-      ft = mkFunctionTable functions
+      ft = mkFunctionTable $ map (\(n, _, c) -> (n, c)) functions
   result <- runExceptT (execStateT (runReaderT executeVM ft) vm)
   case result of
     Left err -> B.putStrLn err
