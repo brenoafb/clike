@@ -49,7 +49,7 @@ compileProgram file out = do
       libs <- liftIO $ mapM loadBytecode importNames
       let linkedBC = linkBytecode $ bc : libs
       Bin.encodeFile out linkedBC
-      putStrLn "Bytecode written do 'bc'"
+      putStrLn $ "Bytecode written to " <> out
 
 executeProgram :: FilePath -> IO ()
 executeProgram file = do
