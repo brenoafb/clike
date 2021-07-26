@@ -13,7 +13,7 @@ VM provided in this project.
 
 ## Usage
 
-This project is build with Stack.
+This project is built with Stack.
 
 Compile the file with the `-c` flag, and run the generated
 bytecode with the `-e` flag.
