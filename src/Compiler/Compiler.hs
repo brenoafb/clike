@@ -5,7 +5,7 @@ module Compiler.Compiler where
 
 import Prelude hiding (GT, EQ, LT)
 
-
+import Typedefs
 import Data.Syntax
 import Data.Bytecode
 import Compiler.ConstantTable
@@ -25,8 +25,6 @@ import Utils
 
 data LCtx = LCtx SymbolTable RegSet               -- local context
 data GCtx = GCtx FunctionTable ConstantTable      -- global context
-
-type Error = B.ByteString
 
 linkBytecode :: [Bytecode] -> Bytecode
 linkBytecode bcs = -- TODO merge constant addresses correctly

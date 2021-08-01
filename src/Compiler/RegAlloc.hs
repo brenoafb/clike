@@ -3,6 +3,7 @@
 
 module Compiler.RegAlloc where
 
+import Typedefs
 import Data.Syntax
 import Data.Bytecode
 

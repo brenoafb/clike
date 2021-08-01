@@ -5,6 +5,7 @@ module VM.VM where
 
 import Prelude hiding (EQ, GT, LT)
 
+import Typedefs
 import Data.Bytecode
 import Data.Int
 import Data.Bits
@@ -20,7 +21,6 @@ import Control.Monad.Loops (untilM_)
 
 import Debug.Trace (trace)
 
-type Error = B.ByteString
 type Memory = V.Vector Int8
 type Code = V.Vector OP
 type FunctionTable = M.Map B.ByteString Code

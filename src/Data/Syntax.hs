@@ -3,6 +3,7 @@
 
 module Data.Syntax where
 
+import Typedefs
 import qualified Data.ByteString as B
 import Data.Int
 import Data.Data
@@ -17,8 +18,6 @@ newtype Import = Import B.ByteString
 
 data Function = Function B.ByteString [(Type, B.ByteString)] Type Stmt
   deriving Show
-
-type Ident = B.ByteString
 
 data Type = IntT
           | ByteT

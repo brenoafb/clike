@@ -3,19 +3,21 @@
 module Data.Bytecode where
 
 import qualified Data.ByteString as B
+import Typedefs
 import Data.Syntax
 import Data.Int
 import Data.String (fromString)
 import Data.Binary
 import GHC.Generics (Generic)
 
-type Index = Int32
-type Address = Int32
-
 data Bytecode = Bytecode
-  { bcConstants :: [(Constant, Address)]
-  , bcFunctions :: [(B.ByteString, Type, [OP])]
+  { bcConstants :: [BCConstant]
+  , bcFunctions :: [BCFunction]
   } deriving Generic
+
+type BCConstant = (Constant, Address)
+
+type BCFunction = (Ident, Type, [OP])
 
 instance Binary Bytecode
 
@@ -28,25 +30,25 @@ instance Binary Constant
 
 
 instance Show Bytecode where
-  show bc = concatMap (\f -> showFunction f) (bcFunctions bc)
+  show bc = concatMap showFunction (bcFunctions bc)
 
 showFunction (name, typ, code) =
   show name <> " " <> show typ <>  "\n"
   <> concatMap (\op -> "\t" <> show op <> "\n") code
 
-data OP = PUSHI Int32        -- push integer onto stack
-        | PUSHR Index        -- load register value to stack
-        | POPR  Index        -- store top of stack in register at index
-        | GOTO  Index        -- goto pc + index unconditionally
-        | CALL  B.ByteString -- call function (push retval to stack, push call stack, pc = 0)
-        | RET                -- return from function
-        | RETV               -- return from void function
-        | BZ Index           -- branch to pc + index if top of stack is zero
-        | SVC                -- call service routine
-        | RW                 -- addr <- pop; push mem[addr] (word)
-        | RB                 -- addr <- pop; push mem[addr] (byte)
-        | WW                 -- TODO addr <- pop; x <- pop; mem[addr] <- x (word)
-        | WB                 -- TODO addr <- pop; x <- pop; mem[addr] <- x (byte)
+data OP = PUSHI Int32  -- push integer onto stack
+        | PUSHR Index  -- load register value to stack
+        | POPR  Index  -- store top of stack in register at index
+        | GOTO  Index  -- goto pc + index unconditionally
+        | CALL  Ident  -- call function (push retval to stack, push call stack, pc = 0)
+        | RET          -- return from function
+        | RETV         -- return from void function
+        | BZ Index     -- branch to pc + index if top of stack is zero
+        | SVC          -- call service routine
+        | RW           -- addr <- pop; push mem[addr] (word)
+        | RB           -- addr <- pop; push mem[addr] (byte)
+        | WW           -- TODO addr <- pop; x <- pop; mem[addr] <- x (word)
+        | WB           -- TODO addr <- pop; x <- pop; mem[addr] <- x (byte)
         | HALT
         | ADD
         | SUB

@@ -3,6 +3,7 @@ module Compiler.FunctionTable
   , mkFunctionTable
   ) where
 
+import Typedefs
 import Data.Bytecode
 import Data.Syntax
 import qualified Data.ByteString as B

@@ -4,9 +4,11 @@ module Main where
 
 import Data.Bytecode
 import Data.Syntax
+import Data.CSyntax
 import Parser.Parser
 import Compiler.Typechecker
 import Compiler.Compiler
+import Translator.Translator
 import VM.VM
 
 import Control.Monad.Except
@@ -32,10 +34,11 @@ main = do
     [filename] -> executeProgram filename
     ["-t", filename]             -> typecheckProgram filename
     ["-p", filename]             -> printAST filename
+    ["-pb", filename]            -> printBytecode filename
     ["-c", filename]             -> compileProgram filename "bc"
     ["-c", filename, bcFilename] -> compileProgram filename bcFilename
     ["-e", filename]             -> executeProgram filename
-    ["-s", filename]             -> buildSymbolTables filename
+    ["-tr", filename]             -> translate filename
 
 compileProgram :: FilePath -> FilePath -> IO ()
 compileProgram file out = do
@@ -62,6 +65,19 @@ executeProgram file = do
     Left err -> B.putStrLn err
     Right vm -> pure ()
 
+printBytecode :: FilePath -> IO ()
+printBytecode file  = do
+  code <- readFile file
+  let program@(Program imports functions) = parseStr code
+  result <- runExceptT $ compile program
+  case result of
+    Left err -> B.putStrLn $ "Compiler error: " <> err
+    Right bc -> do
+      let importNames = map (\(Import dep) -> dep) imports
+      libs <- liftIO $ mapM loadBytecode importNames
+      let linkedBC = linkBytecode $ bc : libs
+      print linkedBC
+
 typecheckProgram :: FilePath -> IO ()
 typecheckProgram file = do
   code <- readFile file
@@ -77,4 +93,9 @@ printAST file = do
   let ast = parseStr code
   print ast
 
-buildSymbolTables = undefined
+translate :: FilePath -> IO ()
+translate file = do
+  bc <- Bin.decodeFile file
+  case runExcept $ translateBytecode bc of
+    Left err -> print err
+    Right cprog -> print cprog
