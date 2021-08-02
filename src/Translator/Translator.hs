@@ -16,12 +16,12 @@ import qualified Data.Vector as V
 import Control.Monad.Except
 import Control.Monad.State
 
-type TCtx = V.Vector Ident
+type TCtx = V.Vector (Maybe Ident)
 
 toByteString = fromString . show
 
 mkTCtx :: BCFunction -> TCtx
-mkTCtx (name, _, ops) = snd $ execState (s indexedOps) (0, V.replicate n "")
+mkTCtx (name, _, ops) = snd $ execState (s indexedOps) (0, V.replicate n Nothing)
   where n = length ops
         indexedOps :: [(Index, OP)]
         indexedOps = zip ([0..] :: [Index]) ops
@@ -33,13 +33,13 @@ mkTCtx (name, _, ops) = snd $ execState (s indexedOps) (0, V.replicate n "")
               (c, _) <- get
               let label = name <> "_BRANCH_" <> fromString (show c)
                   idx   = fromIntegral $ i + d
-              modify (\(c, v) -> (c + 1, v V.// [(idx, label)]))
+              modify (\(c, v) -> (c + 1, v V.// [(idx, Just label)]))
               s ops
             BZ d   -> do
               (c, _) <- get
               let label = name <> "_BRANCH_" <> fromString (show c)
-                  idx   = fromIntegral $ i + d
-              modify (\(c, v) -> (c + 1, v V.// [(idx, label)]))
+                  idx   = fromIntegral $ i + d + 1
+              modify (\(c, v) -> (c + 1, v V.// [(idx, Just label)]))
               s ops
             _      -> s ops
 
@@ -76,7 +76,13 @@ translateFunction f@(name, rettype, ops) = do
   pure $ CFunction cRet name [] stmts
 
 translateOp :: (MonadError Error m) => TCtx -> Index -> OP -> m [CStmt]
-translateOp tctx i op =
+translateOp tctx i op = do
+  label <- catchError ((: []) . CStmt . (<> ":") <$> lookupLabel tctx i) (const $ pure [])
+  body <- translateOp' tctx i op
+  pure $ label <> body
+
+translateOp' :: (MonadError Error m) => TCtx -> Index -> OP -> m [CStmt]
+translateOp' tctx i op =
   case op of
     PUSHI x  -> pure [CStmt $ "stack[sp++] = " <> toByteString x <> ";"]
     PUSHR i  -> pure [CStmt $ "stack[sp++] = registers[" <> toByteString i <> "];"]
@@ -96,9 +102,9 @@ translateOp tctx i op =
                      ]
     GOTO d   -> do
       label <- lookupLabel tctx (i + d)
-      pure [ CStmt $ "goto " <> label]
+      pure [ CStmt $ "goto " <> label <> ";"]
     BZ d     -> do
-      label <- lookupLabel tctx (i + d)
+      label <- lookupLabel tctx (i + d + 1)
       pure [ CStmt "e1 = stack[--sp];"
            , CStmt $ "if (!e1) goto " <> label <> ";"
            ]
@@ -121,11 +127,13 @@ translateOp tctx i op =
     WW       -> undefined -- TODO
     WB       -> undefined -- TODO
 
+
 lookupLabel :: (MonadError Error m) => TCtx -> Index -> m Ident
 lookupLabel tctx i =
   case tctx V.!? fromIntegral i of
     Nothing -> throwError $ "Error looking up label for index " <> fromString (show i)
-    Just label -> pure label
+    Just Nothing -> throwError $ "Error looking up label for index " <> fromString (show i)
+    Just (Just label) -> pure label
 
 cBinOp op = [ CStmt "e1 = stack[--sp];"
             , CStmt "e2 = stack[--sp];"

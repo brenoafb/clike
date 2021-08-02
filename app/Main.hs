@@ -39,6 +39,7 @@ main = do
     ["-c", filename, bcFilename] -> compileProgram filename bcFilename
     ["-e", filename]             -> executeProgram filename
     ["-tr", filename]             -> translate filename
+    ["-cc", filename]             -> compileC filename
 
 compileProgram :: FilePath -> FilePath -> IO ()
 compileProgram file out = do
@@ -99,3 +100,18 @@ translate file = do
   case runExcept $ translateBytecode bc of
     Left err -> print err
     Right cprog -> print cprog
+
+compileC :: FilePath -> IO ()
+compileC file = do
+  code <- readFile file
+  let program@(Program imports functions) = parseStr code
+  result <- runExceptT $ compile program
+  case result of
+    Left err -> B.putStrLn $ "Compiler error: " <> err
+    Right bc -> do
+      let importNames = map (\(Import dep) -> dep) imports
+      libs <- liftIO $ mapM loadBytecode importNames
+      let linkedBC = linkBytecode $ bc : libs
+      case runExcept $ translateBytecode bc of
+        Left err -> print err
+        Right cprog -> print cprog

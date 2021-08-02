@@ -31,8 +31,11 @@ library
       Compiler.RegAlloc
       Compiler.Typechecker
       Data.Bytecode
+      Data.CSyntax
       Data.Syntax
       Parser.Parser
+      Translator.Translator
+      Typedefs
       Utils
       VM.VM
   other-modules:
