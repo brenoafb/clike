@@ -59,6 +59,7 @@ translateBytecode (Bytecode constants functions) = do -- TODO handle constants
         [ CDecl CInt "e1"
         , CDecl CInt "e2"
         , CDecl CInt "retval"
+        , CDecl CInt "tmp"
         , CInit CInt "sp" "0"
         , CArrDecl CUChar "mem" "MEMSIZE"
         , CArrDecl CUChar "stack" "STACKSIZE"
@@ -89,10 +90,10 @@ translateOp' tctx i op =
     POPR i   -> pure [CStmt $ "registers[" <> toByteString i <> "] = stack[--sp];"]
     HALT     -> pure [CStmt "return 0;"]
     RET      -> pure [ CStmt "retval = stack[--sp];"
-                     , CStmt "DUMMY = stack[--sp];"
+                     , CStmt "tmp = stack[--sp];"
                      , CStmt "return;"
                      ]
-    RETV     -> pure [ CStmt "DUMMY = stack[--sp];"
+    RETV     -> pure [ CStmt "tmp = stack[--sp];"
                      , CStmt " return;"
                      ]
     SVC      -> pure [ CStmt "service();" ]
