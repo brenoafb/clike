@@ -11,13 +11,13 @@ import Data.Binary
 import GHC.Generics (Generic)
 
 data Program = Program [Import] [Function]
-  deriving Show
+  deriving (Show, Data, Typeable)
 
 newtype Import = Import B.ByteString
-  deriving Show
+  deriving (Show, Data, Typeable)
 
 data Function = Function B.ByteString [(Type, B.ByteString)] Type Stmt
-  deriving Show
+  deriving (Show, Data, Typeable)
 
 data Type = IntT
           | ByteT
