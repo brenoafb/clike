@@ -28,6 +28,9 @@ library
       Compiler.Compiler
       Compiler.ConstantTable
       Compiler.FunctionTable
+      Compiler.Optimizer
+      Compiler.Optimizer.CompileTimeEval
+      Compiler.Optimizer.ConstantFold
       Compiler.RegAlloc
       Compiler.Typechecker
       Data.Bytecode
@@ -50,6 +53,7 @@ library
     , monad-loops
     , mtl
     , parsec
+    , syb
     , text
     , uniplate
     , vector
@@ -71,6 +75,7 @@ executable clike-exe
     , monad-loops
     , mtl
     , parsec
+    , syb
     , text
     , uniplate
     , vector
@@ -93,6 +98,7 @@ test-suite clike-test
     , monad-loops
     , mtl
     , parsec
+    , syb
     , text
     , uniplate
     , vector

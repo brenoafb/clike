@@ -8,6 +8,7 @@ import Data.CSyntax
 import Parser.Parser
 import Compiler.Typechecker
 import Compiler.Compiler
+import Compiler.Optimizer
 import Translator.Translator
 import VM.VM
 
@@ -44,8 +45,10 @@ main = do
 compileProgram :: FilePath -> FilePath -> IO ()
 compileProgram file out = do
   code <- readFile file
-  let program@(Program imports functions) = parseStr code
-  result <- runExceptT $ compile program
+  let program@(Program imports _) = parseStr code
+      optimizedProgram = optimizeProgram program
+  print optimizedProgram
+  result <- runExceptT $ compile optimizedProgram
   case result of
     Left err -> B.putStrLn $ "Compiler error: " <> err
     Right bc -> do
