@@ -39,6 +39,10 @@ func printStrLn(ptr addr) : void {
   printChar(nl);
 }
 
+func printNewline() : void {
+  printChar(10);
+}
+
 func fac(int n) : int {
   int tmp;
   tmp = 1;

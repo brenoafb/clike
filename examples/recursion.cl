@@ -1,4 +1,14 @@
-import stdlib;
+func printInt(int x) : void {
+  service(1, x);
+}
+
+func printChar(byte x) : void {
+  service(3, x);
+}
+
+func printNewline() : void {
+  printChar(10);
+}
 
 func facrec(int x) : int {
   if (x <= 1) {
@@ -10,12 +20,9 @@ func facrec(int x) : int {
 
 func main() : void {
   int f;
-  str message;
 
   f = facrec(10);
-  message = "the factorial of 10 is ";
 
-  printStr(message);
   printInt(f);
   printNewline();
 }
