@@ -31,6 +31,7 @@ library
       Compiler.Optimizer
       Compiler.Optimizer.CompileTimeEval
       Compiler.Optimizer.ConstantFold
+      Compiler.Optimizer.UnusedVariables
       Compiler.RegAlloc
       Compiler.Typechecker
       Data.Bytecode
@@ -53,6 +54,7 @@ library
     , monad-loops
     , mtl
     , parsec
+    , pretty-simple
     , syb
     , text
     , uniplate
@@ -75,6 +77,7 @@ executable clike-exe
     , monad-loops
     , mtl
     , parsec
+    , pretty-simple
     , syb
     , text
     , uniplate
@@ -98,6 +101,7 @@ test-suite clike-test
     , monad-loops
     , mtl
     , parsec
+    , pretty-simple
     , syb
     , text
     , uniplate

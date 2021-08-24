@@ -19,6 +19,7 @@ import Control.Monad.Reader
 import System.Environment
 import qualified Data.ByteString as B
 import qualified Data.Binary as Bin
+import Text.Pretty.Simple (pPrint)
 
 nRegsCONST = 16
 memSizeCONST = 1024
@@ -47,7 +48,7 @@ compileProgram file out = do
   code <- readFile file
   let program@(Program imports _) = parseStr code
       optimizedProgram = optimizeProgram program
-  print optimizedProgram
+  pPrint optimizedProgram
   result <- runExceptT $ compile optimizedProgram
   case result of
     Left err -> B.putStrLn $ "Compiler error: " <> err

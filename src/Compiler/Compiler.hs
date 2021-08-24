@@ -135,6 +135,8 @@ compileStmt gctx@(GCtx ft ct) lctx@(LCtx st rs) stmt =
 
     ExprS expr -> compileExpr gctx lctx expr
 
+    Noop -> pure []
+
 compileExpr :: (MonadError Error m)
             => GCtx
             -> LCtx

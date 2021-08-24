@@ -7,12 +7,15 @@ import Typedefs
 import Data.Syntax
 import Compiler.Optimizer.ConstantFold
 import Compiler.Optimizer.CompileTimeEval
+import Compiler.Optimizer.UnusedVariables
 
 import Data.Generics
 
 optimizeProgram :: Program -> Program
-optimizeProgram (Program is fs) = Program is fs'
-  where fs' = map optimizeFunction fs
+optimizeProgram = everywhere (mkT optimizeFunction)
 
 optimizeFunction :: Function -> Function
-optimizeFunction = foldConstants . everywhere (mkT evalBinOp)
+optimizeFunction f =
+  let next = removeUnusedVariables . foldConstants $ everywhere (mkT evalBinOp) f
+   in if f == next then next
+                   else optimizeFunction next

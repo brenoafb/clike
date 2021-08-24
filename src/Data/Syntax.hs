@@ -17,7 +17,7 @@ newtype Import = Import B.ByteString
   deriving (Show, Data, Typeable)
 
 data Function = Function B.ByteString [(Type, B.ByteString)] Type Stmt
-  deriving (Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable)
 
 data Type = IntT
           | ByteT
@@ -37,7 +37,7 @@ data Expr = Num Int32
           | RelOp { relOp :: RelOp, e1 :: Expr, e2 :: Expr}
           | UnOp  { unOp :: UnOp, e1 :: Expr }
           | BinOp { binOp :: BinOp, e1 :: Expr, e2 :: Expr}
-          deriving (Show, Data, Typeable)
+          deriving (Eq, Show, Data, Typeable)
 
 data UnOp = Neg | Not
   deriving (Eq, Show, Data, Typeable)
@@ -61,4 +61,5 @@ data Stmt = Decl Type B.ByteString
           | While Expr Stmt
           | Return Expr
           | ExprS Expr
-          deriving (Show, Data, Typeable)
+          | Noop
+          deriving (Eq, Show, Data, Typeable)
